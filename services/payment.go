@@ -147,7 +147,7 @@ func (p *payment) CreateInvoice(c *fiber.Ctx) error {
 		items = append(items, item)
 	}
 
-	var fee float64 = 4000
+	var fee float64 = 5000
 	fees := []xendit.InvoiceFee{
 		{
 			Type:  "ADMIN",
