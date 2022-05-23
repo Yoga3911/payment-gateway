@@ -14,4 +14,5 @@ func Data(app *fiber.App) {
 	api.Post("/ewallet", payment.EWalletCharge)
 	api.Get("/ewallet", payment.GetEWalletCharge)
 	api.Post("/invoice", payment.CreateInvoice)
+	api.Post("/customer", payment.CreateCustomer)
 }

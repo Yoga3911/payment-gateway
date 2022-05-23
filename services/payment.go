@@ -1,11 +1,15 @@
 package services
 
 import (
+	"fmt"
 	"log"
+	"payment/models"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/xendit/xendit-go"
 	"github.com/xendit/xendit-go/balance"
+	"github.com/xendit/xendit-go/customer"
 	"github.com/xendit/xendit-go/ewallet"
 	"github.com/xendit/xendit-go/invoice"
 )
@@ -15,6 +19,7 @@ type Payment interface {
 	EWalletCharge(c *fiber.Ctx) error
 	GetEWalletCharge(c *fiber.Ctx) error
 	CreateInvoice(c *fiber.Ctx) error
+	CreateCustomer(c *fiber.Ctx) error
 }
 
 type payment struct {
@@ -94,30 +99,59 @@ func (p *payment) GetEWalletCharge(c *fiber.Ctx) error {
 	})
 }
 
+func (p *payment) CreateCustomer(c *fiber.Ctx) error {
+	xendit.Opt.SecretKey = p.secret
+
+	data := customer.CreateCustomerParams{
+		ReferenceID:  "coba",
+		Email:        "example@gmail.com",
+		MobileNumber: "+62837213919",
+		GivenNames:   "Given Names",
+	}
+
+	resp, err := customer.CreateCustomer(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":  true,
+		"message": "Get e-wallet charge success",
+		"data":    resp,
+	})
+}
+
 func (p *payment) CreateInvoice(c *fiber.Ctx) error {
 	xendit.Opt.SecretKey = p.secret
 
+	var icustomer *models.ICustomer
+
+	c.BodyParser(&icustomer)
+
 	customer := xendit.InvoiceCustomer{
-		GivenNames:   "Kevin",
-		Email:        "kevin@example.com",
-		MobileNumber: "+6287774441111",
-		Address:      "Jalan Kenanga 12",
+		GivenNames:   icustomer.GivenNames,
+		Email:        icustomer.Email,
+		MobileNumber: icustomer.MobileNumber,
+		Address:      icustomer.Address,
 	}
 
-	items := []xendit.InvoiceItem{
-		{
-			Name:     "Air Conditioner",
-			Quantity: 4,
-			Price:    100000,
-			Category: "Electronic",
-			Url:      "https://yourcompany.com/example_item",
-		},
+	items := []xendit.InvoiceItem{}
+	var subTotal float64
+	for _, val := range icustomer.Items {
+		subTotal += val.Price * float64(val.Quantity)
+		var item xendit.InvoiceItem
+		item.Name = val.Name
+		item.Price = val.Price
+		item.Quantity = val.Quantity
+		item.Category = val.Category
+		items = append(items, item)
 	}
 
+	var fee float64 = 5000
 	fees := []xendit.InvoiceFee{
 		{
 			Type:  "ADMIN",
-			Value: 5000,
+			Value: fee,
 		},
 	}
 
@@ -130,17 +164,18 @@ func (p *payment) CreateInvoice(c *fiber.Ctx) error {
 		InvoiceExpired:  NotificationType[:],
 	}
 
+	externalId := uuid.New()
+	amount := subTotal + fee
 	data := invoice.CreateParams{
-		ExternalID:                     "demo_1475801962608",
-		Amount:                         50000,
-		Description:                    "Invoice Demo #1234",
+		ExternalID:                     fmt.Sprintf("%v", externalId),
+		Amount:                         amount,
+		Description:                    "Silahkan lakukan pembayaran dengan metode yang telah disediakan",
 		InvoiceDuration:                86400,
 		Customer:                       customer,
 		CustomerNotificationPreference: customerNotificationPreference,
 		Currency:                       "IDR",
 		Items:                          items,
 		Fees:                           fees,
-		
 	}
 
 	resp, err := invoice.Create(&data)
