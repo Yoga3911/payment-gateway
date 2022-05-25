@@ -52,16 +52,24 @@ func (p *payment) GetBalance(c *fiber.Ctx) error {
 }
 
 func (p *payment) EWalletCharge(c *fiber.Ctx) error {
+	var ewalletModel *models.EWalletModel
+
+	err := c.BodyParser(&ewalletModel)
+	if err != nil {
+		log.Println(err)
+	}
+
 	xendit.Opt.SecretKey = p.secret
+	referenceId := uuid.New()
 
 	data := ewallet.CreateEWalletChargeParams{
-		ReferenceID:    "test-reference-id",
+		ReferenceID:    fmt.Sprintf("%v", referenceId),
 		Currency:       "IDR",
-		Amount:         1000,
+		Amount:         ewalletModel.Price,
 		CheckoutMethod: "ONE_TIME_PAYMENT",
-		ChannelCode:    "ID_SHOPEEPAY",
+		ChannelCode:    ewalletModel.Method,
 		ChannelProperties: map[string]string{
-			"success_redirect_url": "https://dashboard.xendit.co/register/1",
+			"success_redirect_url": "https://www.xendit.co/id/",
 		},
 		Metadata: map[string]interface{}{
 			"branch_code": "tree_branch",

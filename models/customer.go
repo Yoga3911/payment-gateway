@@ -9,3 +9,8 @@ type ICustomer struct {
 	Address      string `json:"address"`
 	Items        []xendit.InvoiceItem `json:"items"`
 }
+
+type EWalletModel struct {
+	Price float64 `json:"price"`
+	Method string `json:"method"`
+}
