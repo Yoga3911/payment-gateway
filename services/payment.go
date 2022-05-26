@@ -62,18 +62,37 @@ func (p *payment) EWalletCharge(c *fiber.Ctx) error {
 	xendit.Opt.SecretKey = p.secret
 	referenceId := uuid.New()
 
-	data := ewallet.CreateEWalletChargeParams{
-		ReferenceID:    fmt.Sprintf("%v", referenceId),
-		Currency:       "IDR",
-		Amount:         ewalletModel.Price,
-		CheckoutMethod: "ONE_TIME_PAYMENT",
-		ChannelCode:    ewalletModel.Method,
-		ChannelProperties: map[string]string{
-			"success_redirect_url": "https://www.xendit.co/id/",
-		},
-		Metadata: map[string]interface{}{
-			"branch_code": "tree_branch",
-		},
+	data := ewallet.CreateEWalletChargeParams{}
+	if ewalletModel.Phone == "" {
+		data = ewallet.CreateEWalletChargeParams{
+			ReferenceID:    fmt.Sprintf("%v", referenceId),
+			Currency:       "IDR",
+			Amount:         ewalletModel.Price,
+			CheckoutMethod: "ONE_TIME_PAYMENT",
+			ChannelCode:    ewalletModel.Method,
+			ChannelProperties: map[string]string{
+				"success_redirect_url": "https://www.xendit.co/id/",
+			},
+			Metadata: map[string]interface{}{
+				"branch_code": "tree_branch",
+			},
+		}
+	} else if ewalletModel.Phone != "" {
+		data = ewallet.CreateEWalletChargeParams{
+			ReferenceID:    fmt.Sprintf("%v", referenceId),
+			Currency:       "IDR",
+			Amount:         ewalletModel.Price,
+			CheckoutMethod: "ONE_TIME_PAYMENT",
+			ChannelCode:    ewalletModel.Method,
+			ChannelProperties: map[string]string{
+				"success_redirect_url": "https://www.xendit.co/id/",
+				"mobile_number":        ewalletModel.Phone,
+			},
+			Metadata: map[string]interface{}{
+				"branch_code": "tree_branch",
+			},
+		}
+
 	}
 
 	charge, chargeErr := ewallet.CreateEWalletCharge(&data)
